@@ -154,24 +154,26 @@ export default function MapView({ routes, activeRouteId, onRouteClick, startLoca
             <button
               key={route.id}
               onClick={() => onRouteClick(route.id)}
-              className="flex items-center gap-2 w-full text-left py-1 hover:opacity-80 transition-opacity"
+              className="flex items-center gap-2 w-full text-left py-1.5 hover:opacity-80 transition-opacity"
             >
               <div
-                className="w-4 h-1.5 rounded-full shrink-0"
-                style={{
-                  background: route.color,
-                  opacity: route.id === activeRouteId ? 1 : 0.5,
-                }}
+                className="w-3 h-3 rounded-full shrink-0"
+                style={{ background: route.color, opacity: route.id === activeRouteId ? 1 : 0.55 }}
               />
-              <span
-                className="text-xs truncate"
-                style={{
-                  color: route.id === activeRouteId ? 'var(--color-text)' : 'var(--color-text-muted)',
-                  fontWeight: route.id === activeRouteId ? '600' : '400',
-                }}
-              >
-                {route.name}
-              </span>
+              <div className="flex-1 min-w-0">
+                <span
+                  className="block text-xs truncate"
+                  style={{
+                    color: route.id === activeRouteId ? 'var(--color-text)' : 'var(--color-text-muted)',
+                    fontWeight: route.id === activeRouteId ? '600' : '400',
+                  }}
+                >
+                  {route.name}
+                </span>
+                <span className="block text-xs" style={{ color: 'var(--color-text-muted)', fontSize: '10px' }}>
+                  {route.metrics?.distance} km · {route.metrics?.elevationGain}m D+
+                </span>
+              </div>
             </button>
           ))}
         </div>
