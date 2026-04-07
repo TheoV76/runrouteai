@@ -111,20 +111,16 @@ export default async function handler(req, res) {
 
 async function generateRealRoutes({ lat, lng, distanceKm, type, preferGreen, pace, apiKey }) {
   const start = { lat, lng };
+  const distanceM = distanceKm * 1000;
 
-  // 1. Récupérer le contexte OSM (espaces verts, feux, etc.)
-  const osmContext = await fetchOSMContext(lat, lng, distanceKm * 400);
+  // 1. Contexte OSM
+  const osmContext = await fetchOSMContext(lat, lng, distanceM * 0.4);
 
-  // 2. Générer plusieurs points de destination (pour diversifier les routes)
-  const angles = [0, 60, 120, 180, 240, 300];
-  const midpoints = angles.map((angle) =>
-    computeLoopMidpoint(lat, lng, distanceKm, angle)
-  );
-
-  // 3. Appels ORS en parallèle (max 3 pour éviter rate limiting)
-  const routePromises = midpoints.slice(0, 3).map(async (mid) => {
+  // 2. Générer plusieurs routes avec des graines différentes (pour varier les tracés)
+  const seeds = [0, 42, 99, 17, 55, 7];
+  const routePromises = seeds.slice(0, 4).map(async (seed) => {
     try {
-      const orsData = await generateRouteORS(apiKey, start, mid);
+      const orsData = await generateRouteORS(apiKey, start, distanceM, type, seed);
       return orsData.features || [];
     } catch {
       return [];
@@ -134,12 +130,11 @@ async function generateRealRoutes({ lat, lng, distanceKm, type, preferGreen, pac
   const routeGroups = await Promise.all(routePromises);
   let allFeatures = routeGroups.flat();
 
-  // Dédupliquer les routes trop similaires
   if (allFeatures.length === 0) {
     throw new Error('Aucune route générée par ORS');
   }
 
-  // 4. Analyser et scorer chaque route
+  // 3. Analyser et scorer
   const scoredRoutes = await Promise.all(
     allFeatures.slice(0, 8).map(async (feature, idx) => {
       const analysis = analyzeORSRoute(feature, osmContext);
@@ -147,16 +142,15 @@ async function generateRealRoutes({ lat, lng, distanceKm, type, preferGreen, pac
       const baseScore = scoreRoute(analysis, distKm, preferGreen);
       const finalScore = aiEnhancedScore(baseScore, osmContext);
 
-      // Élévation (appel limité)
       let elevationGain = 0;
-      if (idx < 3) { // limiter les appels élévation
+      if (idx < 3) {
         elevationGain = await fetchElevation(analysis.coordinates);
       } else {
         elevationGain = Math.round(distKm * 5);
       }
 
       const durationMin = Math.round(distKm * pace);
-      const lightWait = Math.round(analysis.trafficLights * 35); // 35s par feu en moyenne
+      const lightWait = Math.round(analysis.trafficLights * 35);
 
       const route = {
         id: `route-${idx}`,
@@ -178,13 +172,24 @@ async function generateRealRoutes({ lat, lng, distanceKm, type, preferGreen, pac
         isDemoData: false,
       };
 
-      // Résumé IA
       route.aiSummary = await generateRouteSummary(route, preferGreen);
       return route;
     })
   );
 
-  return scoredRoutes;
+  // 4. Filtrer par tolérance de distance ±25%
+  const tolerance = 0.25;
+  const filtered = scoredRoutes.filter(r => {
+    const ratio = r.metrics.distance / distanceKm;
+    return ratio >= (1 - tolerance) && ratio <= (1 + tolerance);
+  });
+
+  // Si trop peu après filtrage, garder les plus proches de la cible
+  return filtered.length >= 2
+    ? filtered
+    : scoredRoutes.sort((a, b) =>
+        Math.abs(a.metrics.distance - distanceKm) - Math.abs(b.metrics.distance - distanceKm)
+      ).slice(0, 5);
 }
 
 function getRouteName(score, analysis) {

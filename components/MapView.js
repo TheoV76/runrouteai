@@ -28,16 +28,12 @@ export default function MapView({ routes, activeRouteId, onRouteClick, startLoca
       zoomControl: true,
     });
 
-    // Tuiles OpenStreetMap (gratuit)
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a>',
+    // Tuiles CartoDB Positron — tons gris, tracés très visibles (gratuit, sans clé)
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a> © <a href="https://carto.com">CartoDB</a>',
+      subdomains: 'abcd',
       maxZoom: 19,
     }).addTo(mapInstanceRef.current);
-
-    // Alternative sombre (Stadia Maps — gratuit sans clé pour OSM Alidade)
-    // L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png', {
-    //   attribution: '...',
-    // }).addTo(mapInstanceRef.current);
 
     return () => {
       if (mapInstanceRef.current) {
@@ -91,34 +87,36 @@ export default function MapView({ routes, activeRouteId, onRouteClick, startLoca
       if (!route.coordinates?.length) return;
       const isActive = route.id === activeRouteId;
 
-      // Ligne principale
+      // Ligne principale — épaisseur augmentée pour meilleure lisibilité
       const polyline = L.polyline(route.coordinates, {
         color: route.color || '#2d8c44',
-        weight: isActive ? 5 : 3,
-        opacity: isActive ? 0.95 : 0.5,
-        smoothFactor: 1.5,
+        weight: isActive ? 8 : 5,
+        opacity: isActive ? 1 : 0.75,
+        smoothFactor: 1,
+        lineCap: 'round',
+        lineJoin: 'round',
       });
 
       // Halo pour la route active
       if (isActive) {
         const halo = L.polyline(route.coordinates, {
           color: route.color || '#2d8c44',
-          weight: 12,
-          opacity: 0.15,
+          weight: 18,
+          opacity: 0.22,
         }).addTo(mapInstanceRef.current);
         layersRef.current[`${route.id}-halo`] = halo;
       }
 
       polyline.on('click', () => onRouteClick(route.id));
       polyline.on('mouseover', function () {
-        if (!isActive) this.setStyle({ opacity: 0.85, weight: 4 });
+        if (!isActive) this.setStyle({ opacity: 1, weight: 7 });
         this.bindTooltip(
           `<b>${route.name}</b><br/>${route.metrics.distance} km · D+ ${route.metrics.elevationGain}m`,
           { permanent: false, direction: 'top' }
         ).openTooltip();
       });
       polyline.on('mouseout', function () {
-        if (!isActive) this.setStyle({ opacity: 0.5, weight: 3 });
+        if (!isActive) this.setStyle({ opacity: 0.75, weight: 5 });
       });
 
       polyline.addTo(mapInstanceRef.current);
