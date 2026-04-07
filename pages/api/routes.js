@@ -154,9 +154,9 @@ async function generateRealRoutes({ lat, lng, distanceKm, type, preferGreen, pac
 
       const route = {
         id: `route-${idx}`,
-        name: getRouteName(finalScore, analysis),
+        name: getRouteName(finalScore, analysis, idx, type),
         tags: getRouteTags(analysis),
-        color: getRouteColor(finalScore.overall),
+        color: getRouteColor(idx),
         coordinates: analysis.coordinates,
         metrics: {
           distance: parseFloat(distKm.toFixed(2)),
@@ -192,12 +192,15 @@ async function generateRealRoutes({ lat, lng, distanceKm, type, preferGreen, pac
       ).slice(0, 5);
 }
 
-function getRouteName(score, analysis) {
-  if (score.green >= 70) return 'Parcours Nature';
-  if (score.green >= 50) return 'Circuit Vert';
-  if (score.tranquility >= 80) return 'Route Tranquille';
-  if (analysis.primaryRoadRatio < 0.1) return 'Sentier Calme';
-  return 'Circuit Urbain';
+function getRouteName(score, analysis, idx, type) {
+  // Noms basés sur le type + caractéristique principale
+  const prefix = type === 'loop' ? 'Boucle' : 'Aller-retour';
+  const dirs = ['Nord', 'Nord-Est', 'Est', 'Sud-Est', 'Sud', 'Sud-Ouest', 'Ouest', 'Nord-Ouest'];
+  const dir = dirs[idx % dirs.length];
+  if (score.green >= 70) return prefix + ' Verte ' + dir;
+  if (score.tranquility >= 80) return prefix + ' Tranquille ' + dir;
+  if (analysis.primaryRoadRatio < 0.1) return prefix + ' ' + dir + ' (calme)';
+  return prefix + ' Urbaine ' + dir;
 }
 
 function getRouteTags(analysis) {
@@ -210,9 +213,9 @@ function getRouteTags(analysis) {
   return tags;
 }
 
-function getRouteColor(overall) {
-  if (overall >= 80) return '#22c55e';
-  if (overall >= 65) return '#84cc16';
-  if (overall >= 50) return '#f59e0b';
-  return '#f87171';
+// Palette douce — pas de rouge fluo
+const ROUTE_COLORS = ['#2563eb', '#16a34a', '#d97706', '#7c3aed', '#0891b2'];
+
+function getRouteColor(idx) {
+  return ROUTE_COLORS[idx % ROUTE_COLORS.length];
 }

@@ -31,8 +31,8 @@ export default function SearchPanel({ onGenerate, isLoading }) {
   }, [address]);
 
   function selectSuggestion(s) {
-    setAddress(s.display.split(',').slice(0, 2).join(','));
-    setSelectedLocation({ lat: s.lat, lng: s.lng, display: s.display });
+    setAddress(s.shortLabel || s.display.split(',').slice(0, 2).join(','));
+    setSelectedLocation({ lat: s.lat, lng: s.lng, display: s.shortLabel || s.display });
     setSuggestions([]);
   }
 
@@ -135,10 +135,8 @@ export default function SearchPanel({ onGenerate, isLoading }) {
                     }}
                     onMouseDown={() => selectSuggestion(s)}
                   >
-                    <span className="block font-medium">{s.display.split(',')[0]}</span>
-                    <span style={{ color: 'var(--color-text-muted)' }}>
-                      {s.display.split(',').slice(1, 3).join(',')}
-                    </span>
+                    <span className="block font-medium">{s.ligne1}</span>
+                    <span style={{ color: 'var(--color-text-muted)' }}>{s.ligne2}</span>
                   </button>
                 ))}
               </div>
