@@ -34,9 +34,9 @@ export default function Home() {
           lat: params.lat,
           lng: params.lng,
           distanceKm: params.distanceKm,
-          type: params.type,
           preferGreen: params.preferGreen,
           pace: params.pace,
+          alternativeStart: params.alternativeStart || false,
         }),
       });
 
